@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
 
-app = FastAPI(title="Indoor Operations API")
+app = FastAPI(title="Gaming YouTube Thumbnail Designer API")
 
 app.add_middleware(
     CORSMiddleware,
@@ -13,24 +13,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-class PickupRequest(BaseModel):
+class Review(BaseModel):
     id: int
-    customer_name: str
-    contact_phone: str
-    pickup_address: str
-    carpet_details: str
+    title: str
     status: str
-    driver_id: Optional[int] = None
+    score: float
     timestamp: str
 
-class Review(BaseModel):
-    pickup_id: int
-    score: int
-    notes: str
+class ThemeUpdate(BaseModel):
+    theme_preference: str
 
-pickups = [
-    {"id": 1, "customer_name": "John Doe", "contact_phone": "555-0101", "pickup_address": "123 Maple St", "carpet_details": "Persian, 8x10", "status": "pending", "driver_id": None, "timestamp": "2023-10-27T10:00:00"}
+# In-memory data
+data_store = [
+    {"id": 1, "title": "Epic Gaming Setup", "status": "active", "score": 9.5, "timestamp": "2023-10-27T10:00:00Z"},
+    {"id": 2, "title": "Speedrun Tutorial", "status": "pending", "score": 8.2, "timestamp": "2023-10-27T11:30:00Z"}
 ]
+
+user_settings = {"theme_preference": "dark"}
 
 @app.get("/api/health")
 def health_check():
@@ -38,28 +37,16 @@ def health_check():
 
 @app.get("/api/analytics")
 def get_analytics():
-    return {"total_pickups": len(pickups), "completion_rate": 0.0}
-
-@app.get("/api/pickups", response_model=List[PickupRequest])
-def get_pickups(status: Optional[str] = None):
-    if status:
-        return [p for p in pickups if p["status"] == status]
-    return pickups
-
-@app.post("/api/pickups")
-def create_pickup(data: PickupRequest):
-    pickups.append(data.dict())
-    return data
-
-@app.patch("/api/pickups/{pickup_id}/status")
-def update_status(pickup_id: int, status: str, driver_id: Optional[int] = None):
-    for p in pickups:
-        if p["id"] == pickup_id:
-            p["status"] = status
-            if driver_id: p["driver_id"] = driver_id
-            return p
-    raise HTTPException(status_code=404, detail="Pickup not found")
+    return {"total_items": len(data_store), "average_score": sum(d['score'] for d in data_store) / len(data_store)}
 
 @app.post("/api/reviews")
 def submit_review(review: Review):
-    return {"message": "Review recorded", "data": review}
+    data_store.append(review.dict())
+    return {"message": "Review submitted successfully"}
+
+@app.patch("/api/settings/theme")
+def update_theme(settings: ThemeUpdate):
+    if settings.theme_preference not in ["light", "dark"]:
+        raise HTTPException(status_code=400, detail="Invalid theme")
+    user_settings["theme_preference"] = settings.theme_preference
+    return user_settings
